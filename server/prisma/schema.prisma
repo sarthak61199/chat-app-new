@@ -46,6 +46,7 @@ model ChatParticipant {
   isAdmin           Boolean   @default(false)
   joinedAt          DateTime  @default(now())
   lastMessageReadAt DateTime?
+  deletedAt         DateTime? // NULL = active, SET = user "deleted" the chat
 
   chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

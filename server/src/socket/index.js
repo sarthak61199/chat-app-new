@@ -4,12 +4,13 @@ import { getSessionIdFromCookie } from "../middleware/auth.js";
 // Map<userId, Set<socketId>> - tracks all connections per user
 const onlineUsers = new Map();
 
-// Get all users the given user shares chats with
+// Get all users the given user shares active chats with
 async function getChatContacts(userId) {
   const contacts = await prisma.chatParticipant.findMany({
     where: {
-      chat: { participants: { some: { userId } } },
-      userId: { not: userId }
+      chat: { participants: { some: { userId, deletedAt: null } } },
+      userId: { not: userId },
+      deletedAt: null
     },
     select: { userId: true },
     distinct: ['userId']
@@ -81,14 +82,14 @@ export function setupSocket(io) {
 
     // Join a specific chat room (for presence tracking)
     socket.on("join-chat", async (chatId) => {
-      // Verify user is a participant
+      // Verify user is an active participant
       const participant = await prisma.chatParticipant.findUnique({
         where: {
           chatId_userId: { chatId, userId: socket.user.id },
         },
       });
 
-      if (participant) {
+      if (participant && !participant.deletedAt) {
         socket.join(chatId);
         console.log(`${socket.user.username} joined chat ${chatId}`);
       }
@@ -105,7 +106,7 @@ export function setupSocket(io) {
       if (!chatId) return;
 
       const participants = await prisma.chatParticipant.findMany({
-        where: { chatId },
+        where: { chatId, deletedAt: null },
         select: { userId: true },
       });
 
@@ -124,7 +125,7 @@ export function setupSocket(io) {
       if (!chatId) return;
 
       const participants = await prisma.chatParticipant.findMany({
-        where: { chatId },
+        where: { chatId, deletedAt: null },
         select: { userId: true },
       });
 

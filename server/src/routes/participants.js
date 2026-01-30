@@ -37,15 +37,17 @@ participants.post("/:chatId/participants", async (c) => {
       return c.json({ error: "Cannot add participants to a 1-1 chat" }, 400);
     }
 
-    // Verify current user is admin
-    const currentParticipant = chat.participants.find((p) => p.userId === user.id);
+    // Verify current user is an active admin
+    const currentParticipant = chat.participants.find(
+      (p) => p.userId === user.id && !p.deletedAt
+    );
     if (!currentParticipant || !currentParticipant.isAdmin) {
       return c.json({ error: "Only admins can add participants" }, 403);
     }
 
-    // Check if user is already a participant
+    // Check if user is already an active participant
     const existingParticipant = chat.participants.find((p) => p.userId === userId);
-    if (existingParticipant) {
+    if (existingParticipant && !existingParticipant.deletedAt) {
       return c.json({ error: "User is already a participant" }, 400);
     }
 
@@ -59,22 +61,41 @@ participants.post("/:chatId/participants", async (c) => {
       return c.json({ error: "User not found" }, 404);
     }
 
-    // Add participant
-    const participant = await prisma.chatParticipant.create({
-      data: {
-        chatId,
-        userId,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            email: true,
+    let participant;
+
+    // If user has a soft-deleted participant record, reactivate it
+    if (existingParticipant && existingParticipant.deletedAt) {
+      participant = await prisma.chatParticipant.update({
+        where: { id: existingParticipant.id },
+        data: { deletedAt: null, joinedAt: new Date(), lastMessageReadAt: new Date() },
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              email: true,
+            },
           },
         },
-      },
-    });
+      });
+    } else {
+      // Add new participant
+      participant = await prisma.chatParticipant.create({
+        data: {
+          chatId,
+          userId,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              email: true,
+            },
+          },
+        },
+      });
+    }
 
     const formattedParticipant = {
       id: participant.id,
@@ -84,10 +105,11 @@ participants.post("/:chatId/participants", async (c) => {
       isAdmin: participant.isAdmin,
     };
 
-    // Emit to all participants' user rooms (including the new participant)
+    // Emit to all active participants' user rooms (including the new/reactivated participant)
     const io = c.get("io");
     if (io) {
-      const allParticipants = [...chat.participants, { userId }];
+      const activeParticipants = chat.participants.filter((p) => !p.deletedAt);
+      const allParticipants = [...activeParticipants, { userId }];
       for (const p of allParticipants) {
         io.to(`user:${p.userId}`).emit("participant-added", {
           chatId,
@@ -126,8 +148,10 @@ participants.delete("/:chatId/participants/:userId", async (c) => {
       return c.json({ error: "Cannot remove participants from a 1-1 chat" }, 400);
     }
 
-    // Verify current user is admin or removing themselves
-    const currentParticipant = chat.participants.find((p) => p.userId === user.id);
+    // Verify current user is an active admin or removing themselves
+    const currentParticipant = chat.participants.find(
+      (p) => p.userId === user.id && !p.deletedAt
+    );
     if (!currentParticipant) {
       return c.json({ error: "You are not a participant of this chat" }, 403);
     }
@@ -137,21 +161,25 @@ participants.delete("/:chatId/participants/:userId", async (c) => {
       return c.json({ error: "Only admins can remove other participants" }, 403);
     }
 
-    // Check if participant exists
-    const participantToRemove = chat.participants.find((p) => p.userId === userIdToRemove);
+    // Check if participant exists and is active
+    const participantToRemove = chat.participants.find(
+      (p) => p.userId === userIdToRemove && !p.deletedAt
+    );
     if (!participantToRemove) {
       return c.json({ error: "User is not a participant" }, 404);
     }
 
-    // Delete participant
-    await prisma.chatParticipant.delete({
+    // Soft-delete: set deletedAt instead of removing the record
+    await prisma.chatParticipant.update({
       where: { id: participantToRemove.id },
+      data: { deletedAt: new Date() },
     });
 
-    // Emit to all participants' user rooms (including the removed user)
+    // Emit to all active participants' user rooms (including the removed user)
     const io = c.get("io");
     if (io) {
-      for (const p of chat.participants) {
+      const activeParticipants = chat.participants.filter((p) => !p.deletedAt);
+      for (const p of activeParticipants) {
         io.to(`user:${p.userId}`).emit("participant-removed", {
           chatId,
           userId: userIdToRemove,

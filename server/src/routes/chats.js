@@ -17,11 +17,12 @@ chats.get("/", async (c) => {
       prisma.chat.findMany({
         where: {
           participants: {
-            some: { userId: user.id },
+            some: { userId: user.id, deletedAt: null },
           },
         },
         include: {
           participants: {
+            where: { deletedAt: null },
             include: {
               user: {
                 select: {
@@ -47,7 +48,7 @@ chats.get("/", async (c) => {
         },
         orderBy: { updatedAt: "desc" },
       }),
-      // Single query to get all unread counts
+      // Single query to get all unread counts (only for active participants, messages after joinedAt)
       prisma.$queryRaw`
         SELECT
           cp.chatId,
@@ -55,8 +56,9 @@ chats.get("/", async (c) => {
         FROM ChatParticipant cp
         LEFT JOIN Message m ON m.chatId = cp.chatId
           AND m.senderId != cp.userId
+          AND m.createdAt >= cp.joinedAt
           AND (cp.lastMessageReadAt IS NULL OR m.createdAt > cp.lastMessageReadAt)
-        WHERE cp.userId = ${user.id}
+        WHERE cp.userId = ${user.id} AND cp.deletedAt IS NULL
         GROUP BY cp.chatId
       `,
     ]);
@@ -111,7 +113,7 @@ chats.post("/", async (c) => {
 
     const { name, isGroup, participantIds } = result.data;
 
-    // For 1-1 chats, check if chat already exists
+    // For 1-1 chats, check if chat already exists (including soft-deleted participants)
     if (!isGroup && participantIds.length === 1) {
       const existingChat = await prisma.chat.findFirst({
         where: {
@@ -137,12 +139,30 @@ chats.post("/", async (c) => {
       });
 
       if (existingChat) {
+        // Check if current user's participant record is soft-deleted
+        const currentUserParticipant = existingChat.participants.find(
+          (p) => p.userId === user.id
+        );
+
+        if (currentUserParticipant?.deletedAt) {
+          // Reactivate the soft-deleted participant
+          await prisma.chatParticipant.update({
+            where: { id: currentUserParticipant.id },
+            data: { deletedAt: null, joinedAt: new Date(), lastMessageReadAt: new Date() },
+          });
+        }
+
+        // Return only active participants
+        const activeParticipants = existingChat.participants.filter(
+          (p) => !p.deletedAt || p.userId === user.id
+        );
+
         return c.json({
           chat: {
             id: existingChat.id,
-            name: existingChat.participants.find((p) => p.userId !== user.id)?.user.username,
+            name: activeParticipants.find((p) => p.userId !== user.id)?.user.username,
             isGroup: existingChat.isGroup,
-            participants: existingChat.participants.map((p) => ({
+            participants: activeParticipants.map((p) => ({
               id: p.id,
               userId: p.user.id,
               username: p.user.username,
@@ -213,11 +233,12 @@ chats.get("/:chatId", async (c) => {
       where: {
         id: chatId,
         participants: {
-          some: { userId: user.id },
+          some: { userId: user.id, deletedAt: null },
         },
       },
       include: {
         participants: {
+          where: { deletedAt: null },
           include: {
             user: {
               select: {
@@ -258,7 +279,7 @@ chats.get("/:chatId", async (c) => {
   }
 });
 
-// Delete/leave chat - removes user from participants, deletes chat if no participants left
+// Delete/leave chat - soft-deletes user's participation (sets deletedAt)
 chats.delete("/:chatId", async (c) => {
   try {
     const user = c.get("user");
@@ -275,12 +296,12 @@ chats.delete("/:chatId", async (c) => {
       return c.json({ error: "Chat not found" }, 404);
     }
 
-    // Verify user is a participant
+    // Verify user is an active participant
     const participant = await prisma.chatParticipant.findUnique({
       where: { chatId_userId: { chatId, userId: user.id } },
     });
 
-    if (!participant) {
+    if (!participant || participant.deletedAt) {
       return c.json({ error: "Not a participant" }, 403);
     }
 
@@ -293,23 +314,21 @@ chats.delete("/:chatId", async (c) => {
       });
     }
 
-    // Remove user from participants
-    await prisma.chatParticipant.delete({
+    // Soft-delete: set deletedAt instead of removing the record
+    await prisma.chatParticipant.update({
       where: { chatId_userId: { chatId, userId: user.id } },
+      data: { deletedAt: new Date() },
     });
 
-    // Check remaining participants
+    // Count only active participants
     const remainingCount = await prisma.chatParticipant.count({
-      where: { chatId },
+      where: { chatId, deletedAt: null },
     });
 
-    // If no participants left, delete the chat (messages cascade-delete via Prisma)
-    if (remainingCount === 0) {
-      await prisma.chat.delete({ where: { id: chatId } });
-    } else {
-      // Notify remaining participants that user left
+    // Notify only active participants that user left
+    if (remainingCount > 0) {
       const remaining = await prisma.chatParticipant.findMany({
-        where: { chatId },
+        where: { chatId, deletedAt: null },
         select: { userId: true },
       });
       for (const p of remaining) {

@@ -15,19 +15,23 @@ messages.get("/:chatId/messages", async (c) => {
     const cursor = c.req.query("cursor");
     const limit = parseInt(c.req.query("limit") || "50");
 
-    // Verify user is participant
+    // Verify user is an active participant
     const participant = await prisma.chatParticipant.findUnique({
       where: {
         chatId_userId: { chatId, userId: user.id },
       },
     });
 
-    if (!participant) {
+    if (!participant || participant.deletedAt) {
       return c.json({ error: "Not a participant of this chat" }, 403);
     }
 
+    // Only fetch messages created after the user joined (or rejoined)
     const chatMessages = await prisma.message.findMany({
-      where: { chatId },
+      where: {
+        chatId,
+        createdAt: { gte: participant.joinedAt },
+      },
       orderBy: { createdAt: "desc" },
       take: limit + 1,
       ...(cursor && {
@@ -77,14 +81,14 @@ messages.post("/:chatId/messages", async (c) => {
 
     const { content } = result.data;
 
-    // Verify user is participant
+    // Verify user is an active participant
     const participant = await prisma.chatParticipant.findUnique({
       where: {
         chatId_userId: { chatId, userId: user.id },
       },
     });
 
-    if (!participant) {
+    if (!participant || participant.deletedAt) {
       return c.json({ error: "Not a participant of this chat" }, 403);
     }
 
@@ -120,11 +124,24 @@ messages.post("/:chatId/messages", async (c) => {
       createdAt: message.createdAt,
     };
 
-    // Emit to all participants' user rooms (except sender)
+    // For 1-1 chats, reactivate soft-deleted participants
+    const chat = await prisma.chat.findUnique({
+      where: { id: chatId },
+      select: { isGroup: true },
+    });
+
+    if (chat && !chat.isGroup) {
+      await prisma.chatParticipant.updateMany({
+        where: { chatId, deletedAt: { not: null } },
+        data: { deletedAt: null, joinedAt: new Date(), lastMessageReadAt: new Date() },
+      });
+    }
+
+    // Emit to all active participants' user rooms (except sender)
     const io = c.get("io");
     if (io) {
       const participants = await prisma.chatParticipant.findMany({
-        where: { chatId },
+        where: { chatId, deletedAt: null },
         select: { userId: true },
       });
 
@@ -147,6 +164,15 @@ messages.patch("/:chatId/read", async (c) => {
   try {
     const user = c.get("user");
     const chatId = c.req.param("chatId");
+
+    // Verify user is an active participant
+    const participant = await prisma.chatParticipant.findUnique({
+      where: { chatId_userId: { chatId, userId: user.id } },
+    });
+
+    if (!participant || participant.deletedAt) {
+      return c.json({ error: "Not a participant of this chat" }, 403);
+    }
 
     await prisma.chatParticipant.update({
       where: {

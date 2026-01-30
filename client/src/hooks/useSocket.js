@@ -28,6 +28,17 @@ export function useSocket() {
     const socket = connectSocket();
 
     socket.on("new-message", (message) => {
+      // Check if chat exists in current list (might be reactivated)
+      const chatsData = queryClient.getQueryData(["chats"]);
+      const chatExists = chatsData?.chats?.find((c) => c.id === message.chatId);
+
+      if (!chatExists) {
+        // Chat was reactivated (soft-deleted participant was restored)
+        // Invalidate chats query to fetch the reactivated chat
+        queryClient.invalidateQueries({ queryKey: ["chats"] });
+        return;
+      }
+
       // Update messages cache for the chat (infinite query structure)
       queryClient.setQueryData(["messages", message.chatId], (old) => {
         if (!old) return old;
