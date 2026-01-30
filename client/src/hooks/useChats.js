@@ -1,4 +1,5 @@
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { api } from "../lib/api";
 
 export function useChats() {
@@ -23,6 +24,21 @@ export function useCreateChat() {
     mutationFn: api.createChat,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["chats"] });
+    },
+  });
+}
+
+export function useDeleteChat() {
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
+  return useMutation({
+    mutationFn: (chatId) => api.deleteChat(chatId),
+    onSuccess: (_, chatId) => {
+      queryClient.invalidateQueries({ queryKey: ["chats"] });
+      queryClient.removeQueries({ queryKey: ["chat", chatId] });
+      queryClient.removeQueries({ queryKey: ["messages", chatId] });
+      navigate({ to: "/" });
     },
   });
 }

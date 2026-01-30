@@ -69,7 +69,7 @@ chats.get("/", async (c) => {
       id: chat.id,
       name: chat.isGroup
         ? chat.name
-        : chat.participants.find((p) => p.userId !== user.id)?.user.username || "Unknown",
+        : chat.participants.find((p) => p.userId !== user.id)?.user.username || chat.name || "Unknown",
       isGroup: chat.isGroup,
       participants: chat.participants.map((p) => ({
         id: p.id,
@@ -240,7 +240,7 @@ chats.get("/:chatId", async (c) => {
         id: chat.id,
         name: chat.isGroup
           ? chat.name
-          : chat.participants.find((p) => p.userId !== user.id)?.user.username,
+          : chat.participants.find((p) => p.userId !== user.id)?.user.username || chat.name || "Unknown",
         isGroup: chat.isGroup,
         participants: chat.participants.map((p) => ({
           id: p.id,
@@ -254,6 +254,75 @@ chats.get("/:chatId", async (c) => {
     });
   } catch (error) {
     console.error("Get chat error:", error);
+    return c.json({ error: "Internal server error" }, 500);
+  }
+});
+
+// Delete/leave chat - removes user from participants, deletes chat if no participants left
+chats.delete("/:chatId", async (c) => {
+  try {
+    const user = c.get("user");
+    const chatId = c.req.param("chatId");
+    const io = c.get("io");
+
+    // Get chat to check if it's a group
+    const chat = await prisma.chat.findUnique({
+      where: { id: chatId },
+      select: { isGroup: true },
+    });
+
+    if (!chat) {
+      return c.json({ error: "Chat not found" }, 404);
+    }
+
+    // Verify user is a participant
+    const participant = await prisma.chatParticipant.findUnique({
+      where: { chatId_userId: { chatId, userId: user.id } },
+    });
+
+    if (!participant) {
+      return c.json({ error: "Not a participant" }, 403);
+    }
+
+    // For 1-1 chats: store the leaving user's username in chat.name
+    // so the remaining user still sees a meaningful name
+    if (!chat.isGroup) {
+      await prisma.chat.update({
+        where: { id: chatId },
+        data: { name: user.username },
+      });
+    }
+
+    // Remove user from participants
+    await prisma.chatParticipant.delete({
+      where: { chatId_userId: { chatId, userId: user.id } },
+    });
+
+    // Check remaining participants
+    const remainingCount = await prisma.chatParticipant.count({
+      where: { chatId },
+    });
+
+    // If no participants left, delete the chat (messages cascade-delete via Prisma)
+    if (remainingCount === 0) {
+      await prisma.chat.delete({ where: { id: chatId } });
+    } else {
+      // Notify remaining participants that user left
+      const remaining = await prisma.chatParticipant.findMany({
+        where: { chatId },
+        select: { userId: true },
+      });
+      for (const p of remaining) {
+        io.to(`user:${p.userId}`).emit("participant-removed", {
+          chatId,
+          userId: user.id,
+        });
+      }
+    }
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Delete chat error:", error);
     return c.json({ error: "Internal server error" }, 500);
   }
 });

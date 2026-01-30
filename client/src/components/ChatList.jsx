@@ -1,5 +1,5 @@
 import { Link, useParams } from "@tanstack/react-router";
-import { useChats } from "../hooks/useChats";
+import { useChats, useDeleteChat } from "../hooks/useChats";
 import { useAuth } from "../hooks/useAuth";
 import { useTypingIndicators } from "../hooks/useTypingIndicators";
 import TypingDots from "./TypingDots";
@@ -10,14 +10,26 @@ export default function ChatList() {
   const { chatId } = useParams({ strict: false });
   const { user } = useAuth();
   const { isAnyoneTyping } = useTypingIndicators();
+  const deleteChat = useDeleteChat();
 
   if (isLoading) {
     return (
       <div className="p-6 text-center">
         <div className="inline-flex items-center gap-2 text-slate-400">
           <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+            />
           </svg>
           <span className="text-sm">Loading chats...</span>
         </div>
@@ -54,7 +66,7 @@ export default function ChatList() {
             key={chat.id}
             to="/chat/$chatId"
             params={{ chatId: chat.id }}
-            className={`block mx-2 mb-1 px-3 py-3 rounded-xl transition-all duration-150 animate-fade-in-up ${
+            className={`group block mx-2 mb-1 px-3 py-3 rounded-xl transition-all duration-150 animate-fade-in-up relative ${
               chatId === chat.id
                 ? "bg-blue-50 border border-blue-100"
                 : "hover:bg-slate-50 border border-transparent"
@@ -71,7 +83,11 @@ export default function ChatList() {
                   }`}
                 >
                   {chat.isGroup ? (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <svg
+                      className="w-5 h-5"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
                       <path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                     </svg>
                   ) : (
@@ -82,42 +98,67 @@ export default function ChatList() {
                   <OnlineIndicator userId={otherParticipant.userId} size="sm" />
                 )}
               </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between mb-0.5">
-                <p className={`font-medium truncate text-sm ${
-                  chat.unreadCount > 0 ? "text-slate-900" : "text-slate-700"
-                }`}>
-                  {chat.name}
-                </p>
-                <div className="flex items-center gap-2 ml-2">
-                  {chat.lastMessage && (
-                    <span className="text-xs text-slate-400 tabular-nums">
-                      {formatTime(chat.lastMessage.createdAt)}
-                    </span>
-                  )}
-                  {chat.unreadCount > 0 && (
-                    <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold text-white bg-blue-500 rounded-full min-w-[20px] shadow-sm">
-                      {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
-                    </span>
-                  )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-0.5">
+                  <p
+                    className={`font-medium truncate text-sm ${
+                      chat.unreadCount > 0 ? "text-slate-900" : "text-slate-700"
+                    }`}
+                  >
+                    {chat.name}
+                  </p>
+                  <div className="flex items-center gap-2 ml-2">
+                    {chat.lastMessage && (
+                      <span className="text-xs text-slate-400 tabular-nums group-hover:hidden">
+                        {formatTime(chat.lastMessage.createdAt)}
+                      </span>
+                    )}
+                    {chat.unreadCount > 0 && (
+                      <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold text-white bg-blue-500 rounded-full min-w-5 shadow-sm group-hover:hidden">
+                        {chat.unreadCount > 99 ? "99+" : chat.unreadCount}
+                      </span>
+                    )}
+                  </div>
                 </div>
+                {isAnyoneTyping(chat.id) ? (
+                  <p className="text-sm text-blue-500 flex items-center gap-1.5">
+                    <TypingDots />
+                    <span>typing...</span>
+                  </p>
+                ) : chat.lastMessage ? (
+                  <p className="text-sm text-slate-400 truncate">
+                    {chat.lastMessage.senderId === user?.id
+                      ? "You"
+                      : chat.lastMessage.senderUsername}
+                    : {chat.lastMessage.content}
+                  </p>
+                ) : null}
               </div>
-              {isAnyoneTyping(chat.id) ? (
-                <p className="text-sm text-blue-500 flex items-center gap-1.5">
-                  <TypingDots />
-                  <span>typing...</span>
-                </p>
-              ) : chat.lastMessage ? (
-                <p className="text-sm text-slate-400 truncate">
-                  {chat.lastMessage.senderId === user?.id
-                    ? "You"
-                    : chat.lastMessage.senderUsername}
-                  : {chat.lastMessage.content}
-                </p>
-              ) : null}
             </div>
-          </div>
-        </Link>
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                deleteChat.mutate(chat.id);
+              }}
+              className="hidden group-hover:flex p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors absolute top-2 right-2"
+              title="Delete chat"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+            </button>
+          </Link>
         );
       })}
     </div>

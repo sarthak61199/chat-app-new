@@ -35,6 +35,7 @@ export const api = {
   getChats: () => request("/chats"),
   getChat: (chatId) => request(`/chats/${chatId}`),
   createChat: (data) => request("/chats", { method: "POST", body: JSON.stringify(data) }),
+  deleteChat: (chatId) => request(`/chats/${chatId}`, { method: "DELETE" }),
 
   // Messages
   getMessages: (chatId, cursor) =>
