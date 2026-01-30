@@ -28,8 +28,14 @@ export default function ChatView({ chatId }) {
 
   if (chatLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <p className="text-gray-500">Loading chat...</p>
+      <div className="flex-1 flex items-center justify-center animate-pulse-soft">
+        <div className="flex items-center gap-2 text-slate-400">
+          <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          <span>Loading chat...</span>
+        </div>
       </div>
     );
   }
@@ -37,7 +43,7 @@ export default function ChatView({ chatId }) {
   if (!chatData?.chat) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <p className="text-gray-500">Chat not found</p>
+        <p className="text-slate-400">Chat not found</p>
       </div>
     );
   }
@@ -46,13 +52,15 @@ export default function ChatView({ chatId }) {
   const isAdmin = chat.participants.find((p) => p.userId === user?.id)?.isAdmin;
 
   return (
-    <>
+    <div className="flex-1 flex flex-col animate-fade-in">
       {/* Chat Header */}
-      <header className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-        <div className="flex items-center space-x-4">
+      <header className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white/80 backdrop-blur-sm">
+        <div className="flex items-center gap-4">
           <div
-            className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-medium ${
-              chat.isGroup ? "bg-green-500" : "bg-blue-500"
+            className={`w-11 h-11 rounded-xl flex items-center justify-center text-white font-semibold shadow-md ${
+              chat.isGroup
+                ? "bg-gradient-to-br from-emerald-400 to-emerald-500 shadow-emerald-500/20"
+                : "bg-gradient-to-br from-blue-500 to-blue-600 shadow-blue-500/20"
             }`}
           >
             {chat.isGroup ? (
@@ -64,8 +72,8 @@ export default function ChatView({ chatId }) {
             )}
           </div>
           <div>
-            <h2 className="font-semibold text-gray-900">{chat.name}</h2>
-            <p className="text-sm text-gray-500">
+            <h2 className="font-semibold text-slate-800">{chat.name}</h2>
+            <p className="text-sm text-slate-400">
               {chat.isGroup
                 ? `${chat.participants.length} members`
                 : "Direct message"}
@@ -76,7 +84,7 @@ export default function ChatView({ chatId }) {
         {chat.isGroup && (
           <button
             onClick={() => setShowManageModal(true)}
-            className="p-2 text-gray-500 hover:bg-gray-100 rounded-full"
+            className="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl active:scale-95"
             title="Manage participants"
           >
             <svg
@@ -97,31 +105,43 @@ export default function ChatView({ chatId }) {
       </header>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-6 flex flex-col-reverse">
+      <div className="flex-1 overflow-y-auto p-6 flex flex-col-reverse bg-slate-50/50">
         {messagesLoading ? (
-          <div className="text-center text-gray-500">Loading messages...</div>
+          <div className="text-center text-slate-400 flex items-center justify-center gap-2">
+            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            Loading messages...
+          </div>
         ) : messages.length === 0 ? (
-          <div className="text-center text-gray-500">
+          <div className="text-center text-slate-400 py-8">
+            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-slate-100 flex items-center justify-center">
+              <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+            </div>
             No messages yet. Say hello!
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {hasNextPage && (
-              <div className="text-center">
+              <div className="text-center py-2">
                 <button
                   onClick={() => fetchNextPage()}
                   disabled={isFetchingNextPage}
-                  className="text-blue-600 hover:underline disabled:opacity-50"
+                  className="text-sm text-blue-500 hover:text-blue-600 disabled:opacity-50 font-medium"
                 >
                   {isFetchingNextPage ? "Loading..." : "Load older messages"}
                 </button>
               </div>
             )}
-            {[...messages].reverse().map((message) => (
+            {[...messages].reverse().map((message, index) => (
               <Message
                 key={message.id}
                 message={message}
                 isOwn={message.senderId === user?.id || message.senderId === "optimistic"}
+                animationDelay={index * 20}
               />
             ))}
           </div>
@@ -130,7 +150,7 @@ export default function ChatView({ chatId }) {
 
       {/* Typing Indicator */}
       {typingUsers.length > 0 && (
-        <div className="px-6 py-2 text-sm text-gray-500 flex items-center space-x-2">
+        <div className="px-6 py-2 text-sm text-slate-500 flex items-center gap-2 bg-white border-t border-slate-100 animate-fade-in">
           <TypingDots />
           <span>
             {typingUsers.length === 1
@@ -150,6 +170,6 @@ export default function ChatView({ chatId }) {
           onClose={() => setShowManageModal(false)}
         />
       )}
-    </>
+    </div>
   );
 }

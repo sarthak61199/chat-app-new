@@ -27,9 +27,9 @@ function ChatPage() {
   useJoinChat(chatId);
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen animate-fade-in">
       <Sidebar />
-      <main className="flex-1 flex flex-col bg-white">
+      <main className="flex-1 flex flex-col bg-white/80 backdrop-blur-sm">
         <ChatView chatId={chatId} />
       </main>
     </div>

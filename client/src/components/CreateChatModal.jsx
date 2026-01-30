@@ -52,39 +52,39 @@ export default function CreateChatModal({ onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">New Chat</h2>
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 animate-scale-in">
+        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-slate-800">New Chat</h2>
           <button
             onClick={onClose}
-            className="p-1 text-gray-500 hover:bg-gray-100 rounded"
+            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg"
           >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth={2} />
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        <div className="p-4 space-y-4">
+        <div className="p-5 space-y-5">
           {/* Chat Type Toggle */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => setIsGroup(false)}
-              className={`flex-1 py-2 px-4 rounded-lg border ${
+              className={`flex-1 py-2.5 px-4 rounded-xl border-2 font-medium transition-all ${
                 !isGroup
-                  ? "border-blue-500 bg-blue-50 text-blue-700"
-                  : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                  ? "border-blue-500 bg-blue-50 text-blue-600"
+                  : "border-slate-200 text-slate-600 hover:bg-slate-50"
               }`}
             >
               Direct Message
             </button>
             <button
               onClick={() => setIsGroup(true)}
-              className={`flex-1 py-2 px-4 rounded-lg border ${
+              className={`flex-1 py-2.5 px-4 rounded-xl border-2 font-medium transition-all ${
                 isGroup
-                  ? "border-blue-500 bg-blue-50 text-blue-700"
-                  : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                  ? "border-blue-500 bg-blue-50 text-blue-600"
+                  : "border-slate-200 text-slate-600 hover:bg-slate-50"
               }`}
             >
               Group Chat
@@ -93,15 +93,15 @@ export default function CreateChatModal({ onClose }) {
 
           {/* Group Name */}
           {isGroup && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+            <div className="animate-fade-in-up">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
                 Group Name
               </label>
               <input
                 type="text"
                 value={groupName}
                 onChange={(e) => setGroupName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400 focus:bg-white"
                 placeholder="Enter group name"
               />
             </div>
@@ -109,19 +109,19 @@ export default function CreateChatModal({ onClose }) {
 
           {/* Selected Users */}
           {selectedUsers.length > 0 && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 animate-fade-in">
               {selectedUsers.map((user) => (
                 <span
                   key={user.id}
-                  className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm"
+                  className="inline-flex items-center px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium"
                 >
                   {user.username}
                   <button
                     onClick={() => handleSelectUser(user)}
-                    className="ml-2 hover:text-blue-900"
+                    className="ml-2 hover:text-blue-800"
                   >
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth={2} />
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
                 </span>
@@ -131,37 +131,37 @@ export default function CreateChatModal({ onClose }) {
 
           {/* User Search */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-slate-700 mb-2">
               {isGroup ? "Add Participants" : "Select User"}
             </label>
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400 focus:bg-white"
               placeholder="Search by username or email"
             />
 
             {/* Search Results */}
             {searchResults.length > 0 && (
-              <div className="mt-2 border border-gray-200 rounded-md max-h-40 overflow-y-auto">
+              <div className="mt-2 border border-slate-200 rounded-xl max-h-40 overflow-y-auto animate-fade-in">
                 {searchResults.map((user) => (
                   <button
                     key={user.id}
                     onClick={() => handleSelectUser(user)}
-                    className={`w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center justify-between ${
+                    className={`w-full px-4 py-3 text-left hover:bg-slate-50 flex items-center justify-between transition-colors first:rounded-t-xl last:rounded-b-xl ${
                       selectedUsers.find((u) => u.id === user.id)
                         ? "bg-blue-50"
                         : ""
                     }`}
                   >
                     <div>
-                      <p className="font-medium">{user.username}</p>
-                      <p className="text-sm text-gray-500">{user.email}</p>
+                      <p className="font-medium text-slate-800">{user.username}</p>
+                      <p className="text-sm text-slate-400">{user.email}</p>
                     </div>
                     {selectedUsers.find((u) => u.id === user.id) && (
                       <svg
-                        className="w-5 h-5 text-blue-600"
+                        className="w-5 h-5 text-blue-500"
                         fill="currentColor"
                         viewBox="0 0 24 24"
                       >
@@ -179,10 +179,10 @@ export default function CreateChatModal({ onClose }) {
           )}
         </div>
 
-        <div className="p-4 border-t border-gray-200 flex justify-end space-x-3">
+        <div className="p-5 border-t border-slate-100 flex justify-end gap-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md"
+            className="px-4 py-2.5 text-slate-600 hover:bg-slate-100 rounded-xl font-medium"
           >
             Cancel
           </button>
@@ -193,7 +193,7 @@ export default function CreateChatModal({ onClose }) {
               (!isGroup && selectedUsers.length !== 1) ||
               createChat.isPending
             }
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-5 py-2.5 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-md shadow-blue-500/25 active:scale-[0.98]"
           >
             {createChat.isPending ? "Creating..." : "Create Chat"}
           </button>

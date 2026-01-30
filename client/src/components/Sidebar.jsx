@@ -9,18 +9,18 @@ export default function Sidebar() {
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   return (
-    <aside className="w-80 bg-white border-r border-gray-200 flex flex-col">
+    <aside className="w-80 bg-white border-r border-slate-200/80 flex flex-col shadow-sm">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-bold">Chats</h1>
+      <div className="p-5 border-b border-slate-100">
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-bold text-slate-800 tracking-tight">Chats</h1>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="p-2 text-blue-600 hover:bg-blue-50 rounded-full"
+            className="p-2.5 text-blue-600 hover:bg-blue-50 rounded-xl active:scale-95"
             title="New Chat"
           >
             <svg
-              className="w-6 h-6"
+              className="w-5 h-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -42,20 +42,20 @@ export default function Sidebar() {
       </div>
 
       {/* User Info */}
-      <div className="p-4 border-t border-gray-200">
+      <div className="p-4 border-t border-slate-100 bg-slate-50/50">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-medium">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-white font-semibold shadow-md shadow-blue-500/20">
               {user?.username?.[0]?.toUpperCase()}
             </div>
             <div>
-              <p className="font-medium text-sm">{user?.username}</p>
-              <p className="text-xs text-gray-500">{user?.email}</p>
+              <p className="font-medium text-sm text-slate-800">{user?.username}</p>
+              <p className="text-xs text-slate-400">{user?.email}</p>
             </div>
           </div>
           <button
             onClick={() => signOut.mutate()}
-            className="p-2 text-gray-500 hover:bg-gray-100 rounded-full"
+            className="p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl active:scale-95"
             title="Sign Out"
           >
             <svg

@@ -68,21 +68,21 @@ export default function MessageInput({ chatId }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200">
-      <div className="flex items-end space-x-3">
+    <form onSubmit={handleSubmit} className="p-4 border-t border-slate-100 bg-white">
+      <div className="flex items-end gap-3">
         <textarea
           value={content}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           placeholder="Type a message..."
           rows={1}
-          className="flex-1 resize-none px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent max-h-32"
-          style={{ minHeight: "42px" }}
+          className="flex-1 resize-none px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400 focus:bg-white max-h-32 placeholder:text-slate-400"
+          style={{ minHeight: "48px" }}
         />
         <button
           type="submit"
           disabled={!content.trim() || sendMessage.isPending}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-blue-500/25 active:scale-95"
         >
           <svg
             className="w-5 h-5"
