@@ -38,6 +38,7 @@ dev.db
 dev.db-journal
 *.db
 *.db-journal
+server/prisma/generated
 
 # Misc
 .cache/
