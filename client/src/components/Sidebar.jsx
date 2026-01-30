@@ -1,15 +1,59 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth, useSignOut } from "../hooks/useAuth";
 import ChatList from "./ChatList";
 import CreateChatModal from "./CreateChatModal";
+
+const MIN_WIDTH = 240;
+const MAX_WIDTH = 480;
+const DEFAULT_WIDTH = 320;
+const STORAGE_KEY = "sidebar-width";
 
 export default function Sidebar() {
   const { user } = useAuth();
   const signOut = useSignOut();
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [width, setWidth] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, parseInt(saved, 10))) : DEFAULT_WIDTH;
+  });
+  const [isResizing, setIsResizing] = useState(false);
+
+  const handleMouseDown = useCallback((e) => {
+    e.preventDefault();
+    setIsResizing(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e) => {
+      const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, e.clientX));
+      setWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      localStorage.setItem(STORAGE_KEY, width.toString());
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [isResizing, width]);
 
   return (
-    <aside className="w-80 bg-white border-r border-slate-200/80 flex flex-col shadow-sm">
+    <aside
+      className="bg-white border-r border-slate-200/80 flex flex-col shadow-sm relative"
+      style={{ width, minWidth: MIN_WIDTH, maxWidth: MAX_WIDTH }}
+    >
       {/* Header */}
       <div className="p-5 border-b border-slate-100">
         <div className="flex items-center justify-between">
@@ -78,6 +122,14 @@ export default function Sidebar() {
       {showCreateModal && (
         <CreateChatModal onClose={() => setShowCreateModal(false)} />
       )}
+
+      {/* Resize Handle */}
+      <div
+        onMouseDown={handleMouseDown}
+        className={`absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-500/50 transition-colors ${
+          isResizing ? "bg-blue-500" : ""
+        }`}
+      />
     </aside>
   );
 }
