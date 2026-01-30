@@ -2,6 +2,12 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getSocket, connectSocket } from "../lib/socket";
 import { handleUserTyping, handleUserStopTyping } from "./useTypingIndicators";
+import {
+  handleOnlineUsers,
+  handleUserOnline,
+  handleUserOffline,
+  clearOnlineStatus,
+} from "./useOnlineStatus";
 import { api } from "../lib/api";
 
 // Track current chat for unread count management
@@ -96,12 +102,22 @@ export function useSocket() {
     socket.on("user-typing", handleUserTyping);
     socket.on("user-stop-typing", handleUserStopTyping);
 
+    // Online status events
+    socket.on("online-users", handleOnlineUsers);
+    socket.on("user-online", handleUserOnline);
+    socket.on("user-offline", handleUserOffline);
+    socket.on("disconnect", clearOnlineStatus);
+
     return () => {
       socket.off("new-message");
       socket.off("participant-added");
       socket.off("participant-removed");
       socket.off("user-typing");
       socket.off("user-stop-typing");
+      socket.off("online-users");
+      socket.off("user-online");
+      socket.off("user-offline");
+      socket.off("disconnect", clearOnlineStatus);
     };
   }, [queryClient]);
 

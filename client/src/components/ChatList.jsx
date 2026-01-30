@@ -3,6 +3,7 @@ import { useChats } from "../hooks/useChats";
 import { useAuth } from "../hooks/useAuth";
 import { useTypingIndicators } from "../hooks/useTypingIndicators";
 import TypingDots from "./TypingDots";
+import OnlineIndicator from "./OnlineIndicator";
 
 export default function ChatList() {
   const { data, isLoading, error } = useChats();
@@ -42,34 +43,45 @@ export default function ChatList() {
 
   return (
     <div className="py-2">
-      {data.chats.map((chat, index) => (
-        <Link
-          key={chat.id}
-          to="/chat/$chatId"
-          params={{ chatId: chat.id }}
-          className={`block mx-2 mb-1 px-3 py-3 rounded-xl transition-all duration-150 animate-fade-in-up ${
-            chatId === chat.id
-              ? "bg-blue-50 border border-blue-100"
-              : "hover:bg-slate-50 border border-transparent"
-          }`}
-          style={{ animationDelay: `${index * 30}ms` }}
-        >
-          <div className="flex items-center gap-3">
-            <div
-              className={`w-11 h-11 rounded-xl flex items-center justify-center text-white font-semibold shadow-md ${
-                chat.isGroup
-                  ? "bg-gradient-to-br from-emerald-400 to-emerald-500 shadow-emerald-500/20"
-                  : "bg-gradient-to-br from-blue-500 to-blue-600 shadow-blue-500/20"
-              }`}
-            >
-              {chat.isGroup ? (
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-              ) : (
-                chat.name?.[0]?.toUpperCase()
-              )}
-            </div>
+      {data.chats.map((chat, index) => {
+        // For 1-1 chats, get the other participant's userId
+        const otherParticipant = !chat.isGroup
+          ? chat.participants?.find((p) => p.userId !== user?.id)
+          : null;
+
+        return (
+          <Link
+            key={chat.id}
+            to="/chat/$chatId"
+            params={{ chatId: chat.id }}
+            className={`block mx-2 mb-1 px-3 py-3 rounded-xl transition-all duration-150 animate-fade-in-up ${
+              chatId === chat.id
+                ? "bg-blue-50 border border-blue-100"
+                : "hover:bg-slate-50 border border-transparent"
+            }`}
+            style={{ animationDelay: `${index * 30}ms` }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div
+                  className={`w-11 h-11 rounded-xl flex items-center justify-center text-white font-semibold shadow-md ${
+                    chat.isGroup
+                      ? "bg-gradient-to-br from-emerald-400 to-emerald-500 shadow-emerald-500/20"
+                      : "bg-gradient-to-br from-blue-500 to-blue-600 shadow-blue-500/20"
+                  }`}
+                >
+                  {chat.isGroup ? (
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                  ) : (
+                    chat.name?.[0]?.toUpperCase()
+                  )}
+                </div>
+                {otherParticipant && (
+                  <OnlineIndicator userId={otherParticipant.userId} size="sm" />
+                )}
+              </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between mb-0.5">
                 <p className={`font-medium truncate text-sm ${
@@ -106,7 +118,8 @@ export default function ChatList() {
             </div>
           </div>
         </Link>
-      ))}
+        );
+      })}
     </div>
   );
 }

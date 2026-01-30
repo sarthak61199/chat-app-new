@@ -2,10 +2,12 @@ import { useState, useMemo } from "react";
 import { useChat, useMessages } from "../hooks/useChats";
 import { useAuth } from "../hooks/useAuth";
 import { useTypingIndicators } from "../hooks/useTypingIndicators";
+import { useOnlineStatus } from "../hooks/useOnlineStatus";
 import MessageInput from "./MessageInput";
 import Message from "./Message";
 import ManageParticipantsModal from "./ManageParticipantsModal";
 import TypingDots from "./TypingDots";
+import OnlineIndicator from "./OnlineIndicator";
 
 export default function ChatView({ chatId }) {
   const { data: chatData, isLoading: chatLoading } = useChat(chatId);
@@ -18,6 +20,7 @@ export default function ChatView({ chatId }) {
   } = useMessages(chatId);
   const { user } = useAuth();
   const { getTypingUsers } = useTypingIndicators();
+  const { isOnline } = useOnlineStatus();
   const [showManageModal, setShowManageModal] = useState(false);
   const typingUsers = getTypingUsers(chatId);
 
@@ -50,25 +53,33 @@ export default function ChatView({ chatId }) {
 
   const chat = chatData.chat;
   const isAdmin = chat.participants.find((p) => p.userId === user?.id)?.isAdmin;
+  const otherParticipant = !chat.isGroup
+    ? chat.participants.find((p) => p.userId !== user?.id)
+    : null;
 
   return (
     <div className="flex-1 flex flex-col animate-fade-in">
       {/* Chat Header */}
       <header className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white/80 backdrop-blur-sm">
         <div className="flex items-center gap-4">
-          <div
-            className={`w-11 h-11 rounded-xl flex items-center justify-center text-white font-semibold shadow-md ${
-              chat.isGroup
-                ? "bg-gradient-to-br from-emerald-400 to-emerald-500 shadow-emerald-500/20"
-                : "bg-gradient-to-br from-blue-500 to-blue-600 shadow-blue-500/20"
-            }`}
-          >
-            {chat.isGroup ? (
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-            ) : (
-              chat.name?.[0]?.toUpperCase()
+          <div className="relative">
+            <div
+              className={`w-11 h-11 rounded-xl flex items-center justify-center text-white font-semibold shadow-md ${
+                chat.isGroup
+                  ? "bg-gradient-to-br from-emerald-400 to-emerald-500 shadow-emerald-500/20"
+                  : "bg-gradient-to-br from-blue-500 to-blue-600 shadow-blue-500/20"
+              }`}
+            >
+              {chat.isGroup ? (
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              ) : (
+                chat.name?.[0]?.toUpperCase()
+              )}
+            </div>
+            {otherParticipant && (
+              <OnlineIndicator userId={otherParticipant.userId} size="md" />
             )}
           </div>
           <div>
@@ -76,7 +87,9 @@ export default function ChatView({ chatId }) {
             <p className="text-sm text-slate-400">
               {chat.isGroup
                 ? `${chat.participants.length} members`
-                : "Direct message"}
+                : otherParticipant && isOnline(otherParticipant.userId)
+                  ? "Online"
+                  : "Offline"}
             </p>
           </div>
         </div>

@@ -11,6 +11,7 @@ const STORAGE_KEY = "sidebar-width";
 export default function Sidebar() {
   const { user } = useAuth();
   const signOut = useSignOut();
+
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [width, setWidth] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
