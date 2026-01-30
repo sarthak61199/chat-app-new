@@ -156,5 +156,5 @@ export function useJoinChat(chatId) {
       socket.emit("leave-chat", chatId);
       setCurrentChatId(null);
     };
-  }, [chatId, queryClient]);
+  }, [chatId]);
 }

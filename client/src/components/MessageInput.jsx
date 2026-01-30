@@ -75,9 +75,8 @@ export default function MessageInput({ chatId }) {
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           placeholder="Type a message..."
-          rows={1}
-          className="flex-1 resize-none px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400 focus:bg-white max-h-32 placeholder:text-slate-400"
-          style={{ minHeight: "48px" }}
+          role={4}
+          className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-400 focus:bg-white placeholder:text-slate-400 resize-none field-sizing-content"
         />
         <button
           type="submit"
