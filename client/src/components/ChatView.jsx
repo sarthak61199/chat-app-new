@@ -154,7 +154,6 @@ export default function ChatView({ chatId }) {
                 key={message.id}
                 message={message}
                 isOwn={message.senderId === user?.id || message.senderId === "optimistic"}
-                animationDelay={index * 20}
               />
             ))}
           </div>
