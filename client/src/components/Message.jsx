@@ -14,15 +14,35 @@ export default function Message({ message, isOwn }) {
           </p>
         )}
         <p className="break-words leading-relaxed">{message.content}</p>
-        <p
-          className={`text-xs mt-1.5 ${
+        <div
+          className={`flex items-center justify-end gap-1 mt-1.5 ${
             isOwn ? "text-blue-200" : "text-slate-400"
           }`}
         >
-          {formatMessageTime(message.createdAt)}
-        </p>
+          <span className="text-xs">{formatMessageTime(message.createdAt)}</span>
+          {isOwn && <MessageTicks isRead={message.isRead} />}
+        </div>
       </div>
     </div>
+  );
+}
+
+function MessageTicks({ isRead }) {
+  return (
+    <svg
+      className={`w-4 h-4 ${isRead ? "text-cyan-300" : "text-white/60"}`}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {/* First check mark */}
+      <polyline points="3 12 8 17 18 6" />
+      {/* Second check mark (offset) */}
+      <polyline points="8 12 13 17 23 6" />
+    </svg>
   );
 }
 

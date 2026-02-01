@@ -72,6 +72,7 @@ export function useSendMessage(chatId) {
         senderUsername: "You",
         chatId,
         createdAt: new Date().toISOString(),
+        isRead: false,
       };
 
       // Update messages

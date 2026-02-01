@@ -39,6 +39,8 @@ export function useSocket() {
         return;
       }
 
+      const isCurrentChat = message.chatId === currentChatId;
+
       // Update messages cache for the chat (infinite query structure)
       queryClient.setQueryData(["messages", message.chatId], (old) => {
         if (!old) return old;
@@ -59,7 +61,6 @@ export function useSocket() {
         if (chatIndex === -1) return old;
 
         const chat = old.chats[chatIndex];
-        const isCurrentChat = message.chatId === currentChatId;
 
         const updatedChat = {
           ...chat,
@@ -80,6 +81,11 @@ export function useSocket() {
           chats: [updatedChat, ...otherChats],
         };
       });
+
+      // If user is currently viewing this chat, mark the new message as read
+      if (isCurrentChat) {
+        api.markAsRead(message.chatId).catch(console.error);
+      }
     });
 
     socket.on("participant-added", ({ chatId, participant }) => {
@@ -110,6 +116,27 @@ export function useSocket() {
       queryClient.invalidateQueries({ queryKey: ["chats"] });
     });
 
+    socket.on("messages-read", ({ chatId, readAt }) => {
+      // Update messages to mark them as read
+      queryClient.setQueryData(["messages", chatId], (old) => {
+        if (!old) return old;
+        const readTime = new Date(readAt);
+        return {
+          ...old,
+          pages: old.pages.map((page) => ({
+            ...page,
+            messages: page.messages.map((msg) => {
+              // Mark messages as read if they were sent before readAt
+              if (new Date(msg.createdAt) <= readTime) {
+                return { ...msg, isRead: true };
+              }
+              return msg;
+            }),
+          })),
+        };
+      });
+    });
+
     socket.on("user-typing", handleUserTyping);
     socket.on("user-stop-typing", handleUserStopTyping);
 
@@ -123,6 +150,7 @@ export function useSocket() {
       socket.off("new-message");
       socket.off("participant-added");
       socket.off("participant-removed");
+      socket.off("messages-read");
       socket.off("user-typing");
       socket.off("user-stop-typing");
       socket.off("online-users");

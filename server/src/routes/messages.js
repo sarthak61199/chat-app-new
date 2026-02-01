@@ -26,6 +26,19 @@ messages.get("/:chatId/messages", async (c) => {
       return c.json({ error: "Not a participant of this chat" }, 403);
     }
 
+    // Get all other active participants' read timestamps
+    const otherParticipants = await prisma.chatParticipant.findMany({
+      where: {
+        chatId,
+        userId: { not: user.id },
+        deletedAt: null,
+      },
+      select: {
+        userId: true,
+        lastMessageReadAt: true,
+      },
+    });
+
     // Only fetch messages created after the user joined (or rejoined)
     const chatMessages = await prisma.message.findMany({
       where: {
@@ -52,13 +65,24 @@ messages.get("/:chatId/messages", async (c) => {
     const items = hasMore ? chatMessages.slice(0, -1) : chatMessages;
 
     return c.json({
-      messages: items.map((m) => ({
-        id: m.id,
-        content: m.content,
-        senderId: m.senderId,
-        senderUsername: m.sender.username,
-        createdAt: m.createdAt,
-      })),
+      messages: items.map((m) => {
+        // For the sender's own messages, check if all other participants have read it
+        let isRead = false;
+        if (m.senderId === user.id && otherParticipants.length > 0) {
+          isRead = otherParticipants.every(
+            (p) => p.lastMessageReadAt && new Date(p.lastMessageReadAt) >= new Date(m.createdAt)
+          );
+        }
+
+        return {
+          id: m.id,
+          content: m.content,
+          senderId: m.senderId,
+          senderUsername: m.sender.username,
+          createdAt: m.createdAt,
+          isRead,
+        };
+      }),
       nextCursor: hasMore ? items[items.length - 1].id : null,
     });
   } catch (error) {
@@ -174,14 +198,33 @@ messages.patch("/:chatId/read", async (c) => {
       return c.json({ error: "Not a participant of this chat" }, 403);
     }
 
+    const readAt = new Date();
+
     await prisma.chatParticipant.update({
       where: {
         chatId_userId: { chatId, userId: user.id },
       },
       data: {
-        lastMessageReadAt: new Date(),
+        lastMessageReadAt: readAt,
       },
     });
+
+    // Notify other participants that this user has read messages
+    const io = c.get("io");
+    if (io) {
+      const otherParticipants = await prisma.chatParticipant.findMany({
+        where: { chatId, userId: { not: user.id }, deletedAt: null },
+        select: { userId: true },
+      });
+
+      for (const p of otherParticipants) {
+        io.to(`user:${p.userId}`).emit("messages-read", {
+          chatId,
+          userId: user.id,
+          readAt: readAt.toISOString(),
+        });
+      }
+    }
 
     return c.json({ success: true });
   } catch (error) {
